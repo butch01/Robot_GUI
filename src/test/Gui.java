@@ -56,6 +56,7 @@ public class Gui extends JFrame {
 	private JComboBox<String> comboComPorts = new JComboBox<String>();
 	private JComboBox<Integer> comboBaud = new JComboBox<Integer>();
 	private JButton btnConnectCom = new JButton("connect");
+	private JButton btnGenerate = new JButton("generate");
 	
 	private boolean isPortOpened=false;
 	
@@ -76,7 +77,7 @@ public class Gui extends JFrame {
 	
 	private void sendMessage()
 	{
-		
+		comm.send(myMessageBytes);
 	}
 	
 	private void updateMessageInTextfield()
@@ -203,13 +204,13 @@ public class Gui extends JFrame {
 		btnNewButton.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				sendMessage();
-				//tMessage.setText(message);
+				
 			}
 		});
 		btnNewButton.setBounds(119, 516, 89, 23);
 		contentPane.add(btnNewButton);
 		
-		JButton btnGenerate = new JButton("generate");
+
 		btnGenerate.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				buildMessage();

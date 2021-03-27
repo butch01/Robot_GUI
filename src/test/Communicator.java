@@ -48,6 +48,10 @@ public class Communicator
 		}
 	}
 	
+	public void send(byte[] buffer)
+	{
+		portsHashMap.get(openedPort).writeBytes(buffer, buffer.length);
+	}
 	
 	
 	public Communicator() 
