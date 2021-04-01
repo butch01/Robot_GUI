@@ -1,42 +1,37 @@
 package test;
 
 
+import java.awt.Dimension;
 import java.awt.EventQueue;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.JScrollPane;
+import javax.swing.JSlider;
 import javax.swing.border.EmptyBorder;
+import javax.swing.event.ChangeEvent;
+import javax.swing.event.ChangeListener;
+import javax.swing.table.TableColumn;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
+import java.util.HashMap;
 import java.util.Vector;
 import javax.swing.JComboBox;
+import javax.swing.JCheckBox;
+import javax.swing.JList;
+import javax.swing.JTextArea;
+import javax.swing.JTable;
+import javax.swing.JSeparator;
 //import org.apache.commons.codec.binary.Hex;
 
 
 
-public class Gui extends JFrame {
+public class Gui extends JFrame implements ChangeListener {
 
-	
-	public enum servos
-	{
-		shoulderLeft,
-		shoulderRight,
-		upperArmLeft,
-		upperArmRight,
-		lowerArmLeft,
-		lowerArmRight,
-		upperLegLeft,
-		upperLegRight,
-		kneeLeft,
-		kneeRight,
-		ankleLeft,
-		ankleRight
-	}
-	
-	
+
 	/*
 	 * adds baud rates as entries to 
 	 */
@@ -47,25 +42,31 @@ public class Gui extends JFrame {
 		comboBaud.addItem(57600);
 		comboBaud.addItem(115200);
 		comboBaud.addItem(256000);
+		comboBaud.setSelectedItem(115200);
 	}
 	
 	private JPanel contentPane;
 	
+	
 	private Vector<SliderPanel> vSlider = new Vector<SliderPanel>(); // holds all sliders
+	private HashMap<String, Integer> hmSlider = new HashMap<String,Integer>(); // holds mapping of sliders (name, vectorId)
 	private Vector<JTextField> vMessageBytes = new Vector<JTextField>(); // holds all textfields for entries
 	private JComboBox<String> comboComPorts = new JComboBox<String>();
 	private JComboBox<Integer> comboBaud = new JComboBox<Integer>();
 	private JButton btnConnectCom = new JButton("connect");
-	private JButton btnGenerate = new JButton("generate");
+	private JButton btnCpyToHist = new JButton("to History");
+//	private JButton btnGenerate = new JButton("generate");
+	private JButton btnSend = new JButton("send");
+	private JCheckBox chkBoxAutoSend = new JCheckBox("AutoSend");
+	private JTextArea jtaHistory = new JTextArea(new String(), 10,36);
+	private JScrollPane historySP = new JScrollPane(jtaHistory, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 	
 	private boolean isPortOpened=false;
-	
-	
-	private JTextField tMessage;
 	
 	private byte[] myMessageBytes = new byte[12];
 	
 	Communicator comm = new Communicator();
+	private JTable table;
 	
 	private void buildMessage()
 	{
@@ -77,6 +78,8 @@ public class Gui extends JFrame {
 	
 	private void sendMessage()
 	{
+		buildMessage();
+		updateMessageInTextfield();
 		comm.send(myMessageBytes);
 	}
 	
@@ -126,6 +129,7 @@ public class Gui extends JFrame {
 			comboBaud.setEnabled(false);
 			comboComPorts.setEnabled(false);
 			btnConnectCom.setText("close");
+			btnSend.setEnabled(true);
 			isPortOpened = true;
 		}
 		return rc;
@@ -144,6 +148,7 @@ public class Gui extends JFrame {
 			comboComPorts.setEnabled(true);
 			btnConnectCom.setText("connect");
 			isPortOpened = false;
+			btnSend.setEnabled(false);
 		}
 		
 		return rc;
@@ -155,6 +160,7 @@ public class Gui extends JFrame {
 	 * Create the frame.
 	 */
 	public Gui() {
+		
 		vSlider.add( new SliderPanel("shoulder L"));
 		vSlider.add( new SliderPanel("shoulder R"));
 		vSlider.add( new SliderPanel("arm up L"));
@@ -170,6 +176,16 @@ public class Gui extends JFrame {
 		
 		vSlider.add( new SliderPanel("ankle L"));
 		vSlider.add( new SliderPanel("ankle R"));
+		
+		// build hashmap for name resolution of slider in vector
+		for (int i=0; i < vSlider.size(); i++)
+		{
+			hmSlider.put(vSlider.get(i).getName(), i);
+			// add change listener directly to slider object
+			vSlider.get(i).getSlider().addChangeListener(this);
+		}
+
+
 		
 
 		// prepare comports
@@ -189,36 +205,28 @@ public class Gui extends JFrame {
 			vMessageBytes.add(new JTextField(2));
 		}
 		
+		btnSend.setEnabled(false);
 		
 		
 		setTitle("GUI");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(100, 100, 909, 709);
+		setBounds(20, 20, 1000, 1000);
 		contentPane = new JPanel();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 
+		// update the textboxes
+		buildMessage();
+		updateMessageInTextfield();
 		
-		JButton btnNewButton = new JButton("send");
-		btnNewButton.addActionListener(new ActionListener() {
+		btnSend.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
 				sendMessage();
 				
 			}
 		});
-		btnNewButton.setBounds(119, 516, 89, 23);
-		contentPane.add(btnNewButton);
 		
-
-		btnGenerate.addActionListener(new ActionListener() {
-			public void actionPerformed(ActionEvent e) {
-				buildMessage();
-				updateMessageInTextfield();
-			}
-		});
-		btnGenerate.setBounds(20, 516, 89, 23);
-		contentPane.add(btnGenerate);
 		
 		int row = 0;
 		int nextFreeY=0;
@@ -269,7 +277,6 @@ public class Gui extends JFrame {
 		labelMessageCaption.setBounds(10, nextFreeY, 100, 30);
 		contentPane.add(labelMessageCaption);
 		
-
 		nextFreeY = nextFreeY + 40;
 		
 		
@@ -280,5 +287,70 @@ public class Gui extends JFrame {
 			contentPane.add(vMessageBytes.get(i));
 		}
 
+		nextFreeY = nextFreeY + 40;
+		
+		chkBoxAutoSend.setBounds(16, nextFreeY, 97, 23);
+		contentPane.add(chkBoxAutoSend);
+		
+		btnSend.setBounds(119, nextFreeY, 89, 23);
+		contentPane.add(btnSend);
+		
+		nextFreeY = nextFreeY + 40;
+		
+		JSeparator separator = new JSeparator();
+		separator.setBounds(10, nextFreeY, getBounds().width -40, 2);
+		contentPane.add(separator);
+		
+		nextFreeY = nextFreeY + 20;
+		btnCpyToHist.addActionListener(new ActionListener() {
+			public void actionPerformed(ActionEvent e) {
+				if (jtaHistory.getText().length() > 0)
+				{
+					jtaHistory.append("\n" );
+				}
+				jtaHistory.append("{" );
+				
+				for (int i=0; i < vSlider.size(); i++ )
+				{
+					jtaHistory.append(String.valueOf(vSlider.get(i).getValue()));
+					if (i < myMessageBytes.length -1)
+					{
+						jtaHistory.append(", ");
+					}
+				}
+				jtaHistory.append("}" );
+			}
+		});
+		
+		btnCpyToHist.setBounds(10, nextFreeY, 95, 22);
+		
+		contentPane.add(btnCpyToHist);
+		
+		historySP.setBounds(150, nextFreeY, 800, 150);
+		contentPane.add(historySP);
+		
+	}
+
+	/**
+	 * updates for a single source
+	 */
+	@Override
+	public void stateChanged(ChangeEvent e) {
+		// TODO Auto-generated method stub
+		JSlider src =  (JSlider) e.getSource();
+//		System.out.println("IamCalled by "  + src.getName() + " to " + String.valueOf(src.getValue()));
+		
+		int id = hmSlider.get(src.getName());
+		int sliderValue = src.getValue();
+		// update byte values
+		myMessageBytes[id] = (byte) sliderValue;
+		// update edit fields
+		vMessageBytes.get(id).setText(String.valueOf(sliderValue));
+		
+		if (chkBoxAutoSend.isSelected() && comm.isPortOpen())
+		{
+			sendMessage();
+		}
+		
 	}
 }
