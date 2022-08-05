@@ -49,7 +49,16 @@ public class SliderPanel extends JPanel implements ChangeListener {
 	String name = new String();
 	JLabel labelName = new JLabel("name");
 	JSlider slider = new JSlider();
+	private String id = new String() ;
 	
+	public String getId() {
+		return id;
+	}
+
+	public void setId(String id) {
+		this.id = id;
+	}
+
 	public int getValue()
 	{
 		return value;
@@ -64,7 +73,7 @@ public class SliderPanel extends JPanel implements ChangeListener {
 	/**
 	 * Create the panel.
 	 */
-	public SliderPanel(String name) {
+	public SliderPanel(String id, String name) {
 		
 		setLayout(null);
 		this.setName(name);
@@ -78,6 +87,7 @@ public class SliderPanel extends JPanel implements ChangeListener {
 		slider.addChangeListener(this);
 		slider.setName(name);
 		labelName.setText(this.getName());
+		this.id = id ;
 		
 		add(slider);
 //		slider.addChangeListener(new ChangeListener() {

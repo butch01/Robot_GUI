@@ -3,6 +3,7 @@ package test;
 
 import java.awt.Dimension;
 import java.awt.EventQueue;
+import java.awt.TextField;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -59,11 +60,17 @@ public class Gui extends JFrame implements ChangeListener {
 	private JButton btnSend = new JButton("send");
 	private JCheckBox chkBoxAutoSend = new JCheckBox("AutoSend");
 	private JTextArea jtaHistory = new JTextArea(new String(), 10,36);
+	private JTextArea jtaHistoryJson = new JTextArea(new String(), 10,36);
 	private JScrollPane historySP = new JScrollPane(jtaHistory, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+	private JScrollPane historySPJson = new JScrollPane(jtaHistoryJson, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+	
+	private JLabel labelTime = new JLabel("TimeOffset (ms)");
+	private JTextField timeField = new JTextField("500");
 	
 	private boolean isPortOpened=false;
 	
 	private byte[] myMessageBytes = new byte[12];
+	private String currentMessageJson = new String("");
 	
 	Communicator comm = new Communicator();
 	private JTable table;
@@ -76,11 +83,44 @@ public class Gui extends JFrame implements ChangeListener {
 		}
 	}
 	
+	
+	/**
+	 * builds the current message in json format and returns the json string
+	 * 
+	 * @return message as json
+	 */
+	private String getMessageJson()
+	{
+	
+		StringBuilder sb = new StringBuilder();
+		
+		// opening bracket
+		sb.append("{");
+		
+		// adding time for keyframe
+		sb.append("\"t\":" + timeField.getText() + ",");
+		
+		
+		for (int i=0; i < vSlider.size(); i++ )
+		{
+			sb.append("\"" + vSlider.get(i).getId() + "\":" + String.valueOf(vSlider.get(i).getValue()));
+			// adding "," if we are not the last entry
+			if (i < vSlider.size() -1)
+			{
+				sb.append(",");
+			}
+		}
+		sb.append("}");
+		return sb.toString();
+		
+	}
+	
 	private void sendMessage()
 	{
 		buildMessage();
 		updateMessageInTextfield();
-		comm.send(myMessageBytes);
+		// comm.send(myMessageBytes);
+		comm.send(getMessageJson().getBytes());
 	}
 	
 	private void updateMessageInTextfield()
@@ -94,6 +134,7 @@ public class Gui extends JFrame implements ChangeListener {
 		for (int i = 0; i < vMessageBytes.size(); i++)
 		{
 			vMessageBytes.get(i).setText(String.valueOf(Byte.toUnsignedInt(myMessageBytes[i])));
+			
 		}
 		
 	}
@@ -161,21 +202,21 @@ public class Gui extends JFrame implements ChangeListener {
 	 */
 	public Gui() {
 		
-		vSlider.add( new SliderPanel("shoulder L"));
-		vSlider.add( new SliderPanel("shoulder R"));
-		vSlider.add( new SliderPanel("arm up L"));
-		vSlider.add( new SliderPanel("arm up R"));
-		vSlider.add( new SliderPanel("low arm L"));
-		vSlider.add( new SliderPanel("low arm R"));
+		vSlider.add( new SliderPanel("sl", "shoulder L"));
+		vSlider.add( new SliderPanel("sr", "shoulder R"));
+		vSlider.add( new SliderPanel("aul", "arm up L"));
+		vSlider.add( new SliderPanel("aur", "arm up R"));
+		vSlider.add( new SliderPanel("lal", "low arm L"));
+		vSlider.add( new SliderPanel("lar", "low arm R"));
 		
-		vSlider.add( new SliderPanel("leg up L"));
-		vSlider.add( new SliderPanel("leg up L"));
+		vSlider.add( new SliderPanel("lul", "leg up L"));
+		vSlider.add( new SliderPanel("lur", "leg up R"));
 		
-		vSlider.add( new SliderPanel("knee L"));
-		vSlider.add( new SliderPanel("knee R"));
+		vSlider.add( new SliderPanel("kl", "knee L"));
+		vSlider.add( new SliderPanel("kr", "knee R"));
 		
-		vSlider.add( new SliderPanel("ankle L"));
-		vSlider.add( new SliderPanel("ankle R"));
+		vSlider.add( new SliderPanel("al", "ankle L"));
+		vSlider.add( new SliderPanel("ar", "ankle R"));
 		
 		// build hashmap for name resolution of slider in vector
 		for (int i=0; i < vSlider.size(); i++)
@@ -185,8 +226,7 @@ public class Gui extends JFrame implements ChangeListener {
 			vSlider.get(i).getSlider().addChangeListener(this);
 		}
 
-
-		
+			
 
 		// prepare comports
 		addAvailableBaudRatesToCombo();
@@ -240,6 +280,14 @@ public class Gui extends JFrame implements ChangeListener {
 			vSlider.get(i).setBounds(10 + i % 2 * 450, nextFreeY, 400, 44);
 			contentPane.add(vSlider.get(i));
 		}
+		
+		nextFreeY = nextFreeY + 70;
+		
+		labelTime.setBounds(10, nextFreeY, 100, 30);
+		timeField.setBounds(120, nextFreeY +4, 50, 20);
+		contentPane.add(timeField);
+		
+		contentPane.add(labelTime);
 
 		nextFreeY = nextFreeY + 70;
 		JLabel labelCom = new JLabel("COM Port");
@@ -304,21 +352,8 @@ public class Gui extends JFrame implements ChangeListener {
 		nextFreeY = nextFreeY + 20;
 		btnCpyToHist.addActionListener(new ActionListener() {
 			public void actionPerformed(ActionEvent e) {
-				if (jtaHistory.getText().length() > 0)
-				{
-					jtaHistory.append("\n" );
-				}
-				jtaHistory.append("{" );
-				
-				for (int i=0; i < vSlider.size(); i++ )
-				{
-					jtaHistory.append(String.valueOf(vSlider.get(i).getValue()));
-					if (i < myMessageBytes.length -1)
-					{
-						jtaHistory.append(", ");
-					}
-				}
-				jtaHistory.append("}" );
+				addToHistoryArray();
+				addToHistoryJson();
 			}
 		});
 		
@@ -328,6 +363,41 @@ public class Gui extends JFrame implements ChangeListener {
 		
 		historySP.setBounds(150, nextFreeY, 800, 150);
 		contentPane.add(historySP);
+		
+		nextFreeY = nextFreeY + 170;
+		historySPJson.setBounds(150, nextFreeY, 800, 150);
+		contentPane.add(historySPJson);
+		
+	}
+	
+	private void addToHistoryArray ()
+	{
+		if (jtaHistory.getText().length() > 0)
+		{
+			jtaHistory.append("\n" );
+		}
+		jtaHistory.append("{" );
+		
+		for (int i=0; i < vSlider.size(); i++ )
+		{
+			jtaHistory.append(String.valueOf(vSlider.get(i).getValue()));
+			if (i < myMessageBytes.length -1)
+			{
+				jtaHistory.append(", ");
+			}
+		}
+		jtaHistory.append("}" );
+	}
+	
+	private void addToHistoryJson ()
+	{
+		// add newline if it is not the first entry in edit field
+		if (jtaHistoryJson.getText().length() > 0)
+		{
+			jtaHistoryJson.append("\n" );
+		}
+		// add the json message
+		jtaHistoryJson.append(getMessageJson());
 		
 	}
 
