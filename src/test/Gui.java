@@ -43,7 +43,7 @@ public class Gui extends JFrame implements ChangeListener {
 		comboBaud.addItem(57600);
 		comboBaud.addItem(115200);
 		comboBaud.addItem(256000);
-		comboBaud.setSelectedItem(115200);
+		comboBaud.setSelectedItem(57600);
 	}
 	
 	private JPanel contentPane;
@@ -406,7 +406,6 @@ public class Gui extends JFrame implements ChangeListener {
 	 */
 	@Override
 	public void stateChanged(ChangeEvent e) {
-		// TODO Auto-generated method stub
 		JSlider src =  (JSlider) e.getSource();
 //		System.out.println("IamCalled by "  + src.getName() + " to " + String.valueOf(src.getValue()));
 		
