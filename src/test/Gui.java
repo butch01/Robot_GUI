@@ -15,6 +15,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.table.TableColumn;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -46,7 +47,7 @@ public class Gui extends JFrame implements ChangeListener {
 		comboBaud.setSelectedItem(57600);
 	}
 	
-	private JPanel contentPane;
+	private JScrollPane contentPane;
 	
 	// this Vector holds all Sliderpanel Vectors
 	private Vector<Vector<SliderPanel>> vServoGroupSliders = new Vector<Vector<SliderPanel>>();
@@ -68,9 +69,16 @@ public class Gui extends JFrame implements ChangeListener {
 //	private JButton btnGenerate = new JButton("generate");
 	private JButton btnSend = new JButton("send");
 	private JCheckBox chkBoxAutoSend = new JCheckBox("AutoSend");
+	
+//	private Vector jTextArea
 	private JTextArea jtaHistory = new JTextArea(new String(), 10,36);
 	private JTextArea jtaHistoryJson = new JTextArea(new String(), 10,36);
-	private JScrollPane historySP = new JScrollPane(jtaHistory, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+	
+	private Vector<HistoryScrollPane> vScrollPaneHistoryArray = new Vector<HistoryScrollPane>();
+	// private JScrollPane historySP = new JScrollPane(jtaHistory, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+	
+	private HistoryScrollPane historyTest = new HistoryScrollPane();
+	
 	private JScrollPane historySPJson = new JScrollPane(jtaHistoryJson, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 	
 	private JLabel labelTime = new JLabel("TimeOffset (ms)");
@@ -232,8 +240,7 @@ public class Gui extends JFrame implements ChangeListener {
 		{
 			vServoGroupSliders.add(new Vector<SliderPanel>());
 			vhmSlider.add(new HashMap<String, Integer>());
-
-			
+			vScrollPaneHistoryArray.add(new HistoryScrollPane());
 		}
 		
 		int currentServoGroup=0;
@@ -290,8 +297,9 @@ public class Gui extends JFrame implements ChangeListener {
 		
 		setTitle("GUI");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(20, 20, 1000, 1000);
-		contentPane = new JPanel();
+		setBounds(20, 20, 1400, 1000);
+		// contentPane = new JPanel();
+		contentPane = new JScrollPane();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
@@ -406,13 +414,23 @@ public class Gui extends JFrame implements ChangeListener {
 		
 		contentPane.add(btnCpyToHist);
 		
-		historySP.setBounds(150, nextFreeY, 800, 150);
-		contentPane.add(historySP);
+//		historySP.setBounds(150, nextFreeY, 800, 150);
+//		contentPane.add(historySP);
+		
+		int historyScrollPanePosX = 150;
+		for (int servoGroupId=0; servoGroupId < numberOfServoGroups; servoGroupId++)
+		{
+			vScrollPaneHistoryArray.get(servoGroupId).setBounds(historyScrollPanePosX, nextFreeY, 400, 150);
+			historyScrollPanePosX = historyScrollPanePosX + 450;
+			contentPane.add(vScrollPaneHistoryArray.get(servoGroupId));
+		}
+
 		
 		nextFreeY = nextFreeY + 170;
 		historySPJson.setBounds(150, nextFreeY, 800, 150);
 		contentPane.add(historySPJson);
 		
+
 	}
 	
 	private void addToHistoryArray ()
