@@ -15,6 +15,7 @@ import javax.swing.event.ChangeListener;
 import javax.swing.table.TableColumn;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
+import javax.swing.ScrollPaneConstants;
 import javax.swing.JButton;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
@@ -46,11 +47,20 @@ public class Gui extends JFrame implements ChangeListener {
 		comboBaud.setSelectedItem(57600);
 	}
 	
-	private JPanel contentPane;
+	private JScrollPane contentPane;
+	
+	// this Vector holds all Sliderpanel Vectors
+	private Vector<Vector<SliderPanel>> vServoGroupSliders = new Vector<Vector<SliderPanel>>();
+	private int numberOfServoGroups=2;
+//	private Vector<SliderPanel> vSlider = new Vector<SliderPanel>(); // holds all sliders
+
+	// this vector holds all hashmap vectors
+	private Vector<HashMap<String, Integer>> vhmSlider = new Vector<HashMap<String, Integer>>();	// holds mapping of sliders (name, vectorId)
+	// private HashMap<String, Integer> hmSlider = new HashMap<String,Integer>(); // holds mapping of sliders (name, vectorId)
 	
 	
-	private Vector<SliderPanel> vSlider = new Vector<SliderPanel>(); // holds all sliders
-	private HashMap<String, Integer> hmSlider = new HashMap<String,Integer>(); // holds mapping of sliders (name, vectorId)
+	
+	
 	private Vector<JTextField> vMessageBytes = new Vector<JTextField>(); // holds all textfields for entries
 	private JComboBox<String> comboComPorts = new JComboBox<String>();
 	private JComboBox<Integer> comboBaud = new JComboBox<Integer>();
@@ -59,13 +69,22 @@ public class Gui extends JFrame implements ChangeListener {
 //	private JButton btnGenerate = new JButton("generate");
 	private JButton btnSend = new JButton("send");
 	private JCheckBox chkBoxAutoSend = new JCheckBox("AutoSend");
+	
+	private Vector<JCheckBox> vCheckBoxServoGrops = new Vector<JCheckBox>();
+	
+//	private Vector jTextArea
 	private JTextArea jtaHistory = new JTextArea(new String(), 10,36);
 	private JTextArea jtaHistoryJson = new JTextArea(new String(), 10,36);
-	private JScrollPane historySP = new JScrollPane(jtaHistory, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+	
+	private Vector<HistoryScrollPane> vScrollPaneHistoryArray = new Vector<HistoryScrollPane>();
+	// private JScrollPane historySP = new JScrollPane(jtaHistory, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+	
+	private HistoryScrollPane historyTest = new HistoryScrollPane();
+	
 	private JScrollPane historySPJson = new JScrollPane(jtaHistoryJson, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 	
-	private JLabel labelTime = new JLabel("TimeOffset (ms)");
-	private JTextField timeField = new JTextField("500");
+	private JLabel labelTime = new JLabel("TimeOffset (1/100s)");
+	private JTextField timeField = new JTextField("50");
 	
 	private boolean isPortOpened=false;
 	
@@ -75,12 +94,31 @@ public class Gui extends JFrame implements ChangeListener {
 	Communicator comm = new Communicator();
 	private JTable table;
 	
-	private void buildMessage()
+	
+	/**
+	 * returns the time and servo positions as array, ready to put it into history and arduino code
+	 * @param servoGroupId
+	 * @return
+	 */
+	private String getMessageArrayForServoGroup(int servoGroupId)
 	{
-		for (int i=0; i< vSlider.size(); i++)
+		StringBuilder sb = new StringBuilder();
+
+		// opening bracket
+		sb.append("{");
+		sb.append(timeField.getText() + ",");
+
+		for (int i=0; i < vServoGroupSliders.get(servoGroupId).size(); i++ )
 		{
-			myMessageBytes[i]=(byte) vSlider.get(i).getValue();
+			sb.append(String.valueOf(vServoGroupSliders.get(servoGroupId).get(i).getValue()));
+			// adding "," if we are not the last entry
+			if (i < vServoGroupSliders.get(servoGroupId).size() -1)
+			{
+				sb.append(",");
+			}
 		}
+		sb.append("}");
+		return sb.toString();
 	}
 	
 	
@@ -93,32 +131,65 @@ public class Gui extends JFrame implements ChangeListener {
 	{
 	
 		StringBuilder sb = new StringBuilder();
+		int activeServoGroupCheckboxes=0;
 		
-		// opening bracket
-		sb.append("{");
-		
-		// adding time for keyframe
-		sb.append("\"t\":" + timeField.getText() + ",");
-		
-		
-		for (int i=0; i < vSlider.size(); i++ )
+		for (int i=0; i < vCheckBoxServoGrops.size(); i++)
 		{
-			sb.append("\"" + vSlider.get(i).getId() + "\":" + String.valueOf(vSlider.get(i).getValue()));
-			// adding "," if we are not the last entry
-			if (i < vSlider.size() -1)
+			if (vCheckBoxServoGrops.get(i).isSelected() == true)
 			{
-				sb.append(",");
+				activeServoGroupCheckboxes++;
 			}
 		}
-		sb.append("}");
+		
+		// do only if at least one servo group is selected
+		if (activeServoGroupCheckboxes > 0)
+		{
+		
+			int alreadyWrittenServoGroupCounter=0;
+			
+			// opening bracket
+			sb.append("{");
+			
+			// adding time for keyframe
+			sb.append("\"t\":" + timeField.getText() + ",");
+			
+			// iterate over all servo groups
+			for (int servoGroupId=0; servoGroupId < vServoGroupSliders.size(); servoGroupId++)
+			{
+				if (vCheckBoxServoGrops.get(servoGroupId).isSelected())
+				{
+					sb.append("\"sg" + String.valueOf(servoGroupId) + "\":{");
+					for (int i=0; i < vServoGroupSliders.get(servoGroupId).size(); i++ )
+					{
+						sb.append("\"" + vServoGroupSliders.get(servoGroupId).get(i).getId() + "\":" + String.valueOf(vServoGroupSliders.get(servoGroupId).get(i).getValue()));
+						// adding "," if we are not the last entry
+						if (i < vServoGroupSliders.get(servoGroupId).size() -1)
+						{
+							sb.append(",");
+						}
+					}
+					if (alreadyWrittenServoGroupCounter < activeServoGroupCheckboxes -1)
+					{
+						sb.append("},");
+					}
+					else
+					{
+						sb.append("}");
+					}
+					alreadyWrittenServoGroupCounter++;
+				}
+				
+			}
+			sb.append("}\n");
+		}
 		return sb.toString();
 		
 	}
 	
 	private void sendMessage()
 	{
-		buildMessage();
-		updateMessageInTextfield();
+		//buildMessage();
+//		updateMessageInTextfield();
 		// comm.send(myMessageBytes);
 		comm.send(getMessageJson().getBytes());
 	}
@@ -197,35 +268,52 @@ public class Gui extends JFrame implements ChangeListener {
 
 	
 	
+	
+	
 	/**
 	 * Create the frame.
 	 */
 	public Gui() {
 		
-		vSlider.add( new SliderPanel("sl", "shoulder L"));
-		vSlider.add( new SliderPanel("sr", "shoulder R"));
-		vSlider.add( new SliderPanel("aul", "arm up L"));
-		vSlider.add( new SliderPanel("aur", "arm up R"));
-		vSlider.add( new SliderPanel("lal", "low arm L"));
-		vSlider.add( new SliderPanel("lar", "low arm R"));
 		
-		vSlider.add( new SliderPanel("lul", "leg up L"));
-		vSlider.add( new SliderPanel("lur", "leg up R"));
-		
-		vSlider.add( new SliderPanel("kl", "knee L"));
-		vSlider.add( new SliderPanel("kr", "knee R"));
-		
-		vSlider.add( new SliderPanel("al", "ankle L"));
-		vSlider.add( new SliderPanel("ar", "ankle R"));
-		
-		// build hashmap for name resolution of slider in vector
-		for (int i=0; i < vSlider.size(); i++)
+		// generating the Subvectors for each ServoGroup
+		for (int i = 0; i< numberOfServoGroups; i++)
 		{
-			hmSlider.put(vSlider.get(i).getName(), i);
-			// add change listener directly to slider object
-			vSlider.get(i).getSlider().addChangeListener(this);
+			vServoGroupSliders.add(new Vector<SliderPanel>());
+			vhmSlider.add(new HashMap<String, Integer>());
+			vScrollPaneHistoryArray.add(new HistoryScrollPane());
 		}
-
+		
+		int currentServoGroup=0;
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("0", "shoulder L", currentServoGroup));
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("1", "shoulder R", currentServoGroup));
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("2", "arm up L", currentServoGroup));
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("3", "arm up R", currentServoGroup ));
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("4", "low arm L", currentServoGroup));
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("5", "low arm R",currentServoGroup ));
+		
+		currentServoGroup=1;
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("0", "leg up L", currentServoGroup));
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("1", "leg up R", currentServoGroup));
+		
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("2", "knee L", currentServoGroup));
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("3", "knee R", currentServoGroup));
+		
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("4", "ankle L", currentServoGroup));
+		vServoGroupSliders.get(currentServoGroup).add( new SliderPanel("5", "ankle R", currentServoGroup));
+		
+		
+		
+		for (int servoGroupId=0; servoGroupId< vServoGroupSliders.size(); servoGroupId++)
+		{
+			// build hashmap for name resolution of slider in vector
+			for (int i=0; i < vServoGroupSliders.get(servoGroupId).size(); i++)
+			{
+				vhmSlider.get(servoGroupId).put(vServoGroupSliders.get(servoGroupId).get(i).getName(), i);
+				// add change listener directly to slider object
+				vServoGroupSliders.get(servoGroupId).get(i).getSlider().addChangeListener(this);
+			}
+		}
 			
 
 		// prepare comports
@@ -240,24 +328,25 @@ public class Gui extends JFrame implements ChangeListener {
 		
 		
 		// generate textfield Vector for message Bytes
-		for (int i=0; i< vSlider.size(); i++)
-		{
-			vMessageBytes.add(new JTextField(2));
-		}
+//		for (int i=0; i< vSlider.size(); i++)
+//		{
+//			vMessageBytes.add(new JTextField(2));
+//		}
 		
 		btnSend.setEnabled(false);
 		
 		
 		setTitle("GUI");
 		setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		setBounds(20, 20, 1000, 1000);
-		contentPane = new JPanel();
+		setBounds(20, 20, 1400, 1000);
+		// contentPane = new JPanel();
+		contentPane = new JScrollPane();
 		contentPane.setBorder(new EmptyBorder(5, 5, 5, 5));
 		setContentPane(contentPane);
 		contentPane.setLayout(null);
 
 		// update the textboxes
-		buildMessage();
+//		buildMessage();
 		updateMessageInTextfield();
 		
 		btnSend.addActionListener(new ActionListener() {
@@ -270,21 +359,26 @@ public class Gui extends JFrame implements ChangeListener {
 		
 		int row = 0;
 		int nextFreeY=0;
-		for (int i=0; i< vSlider.size(); i++)
+		
+		// display all slider panels, iterate through the servicegroups in increasing order
+		for (int servoGroupId=0; servoGroupId < vServoGroupSliders.size(); servoGroupId++ )
 		{
-			if (i % 2 == 0)
+			for (int i=0; i< vServoGroupSliders.get(servoGroupId).size(); i++)
 			{
-				row ++;
+				if (i % 2 == 0)
+				{
+					row ++;
+				}
+				nextFreeY= 0 + row *50;
+				vServoGroupSliders.get(servoGroupId).get(i).setBounds(10 + i % 2 * 450, nextFreeY, 400, 44);
+				contentPane.add(vServoGroupSliders.get(servoGroupId).get(i));
 			}
-			nextFreeY= 0 + row *50;
-			vSlider.get(i).setBounds(10 + i % 2 * 450, nextFreeY, 400, 44);
-			contentPane.add(vSlider.get(i));
 		}
 		
 		nextFreeY = nextFreeY + 70;
 		
-		labelTime.setBounds(10, nextFreeY, 100, 30);
-		timeField.setBounds(120, nextFreeY +4, 50, 20);
+		labelTime.setBounds(10, nextFreeY, 130, 30);
+		timeField.setBounds(140, nextFreeY +4, 50, 20);
 		contentPane.add(timeField);
 		
 		contentPane.add(labelTime);
@@ -343,6 +437,15 @@ public class Gui extends JFrame implements ChangeListener {
 		btnSend.setBounds(119, nextFreeY, 89, 23);
 		contentPane.add(btnSend);
 		
+		for (int sg=0; sg <numberOfServoGroups; sg ++ )
+		{
+			vCheckBoxServoGrops.add(new JCheckBox("SG" + sg));
+			vCheckBoxServoGrops.get(sg).setSelected(true);
+			vCheckBoxServoGrops.get(sg).setBounds(300 + sg * 90, nextFreeY, 80, 23);
+			contentPane.add(vCheckBoxServoGrops.get(sg));
+		}
+		
+		
 		nextFreeY = nextFreeY + 40;
 		
 		JSeparator separator = new JSeparator();
@@ -361,41 +464,40 @@ public class Gui extends JFrame implements ChangeListener {
 		
 		contentPane.add(btnCpyToHist);
 		
-		historySP.setBounds(150, nextFreeY, 800, 150);
-		contentPane.add(historySP);
+//		historySP.setBounds(150, nextFreeY, 800, 150);
+//		contentPane.add(historySP);
+		
+		int historyScrollPanePosX = 150;
+		for (int servoGroupId=0; servoGroupId < numberOfServoGroups; servoGroupId++)
+		{
+			vScrollPaneHistoryArray.get(servoGroupId).setBounds(historyScrollPanePosX, nextFreeY, 450, 150);
+			historyScrollPanePosX = historyScrollPanePosX + 470;
+			contentPane.add(vScrollPaneHistoryArray.get(servoGroupId));
+		}
+
 		
 		nextFreeY = nextFreeY + 170;
 		historySPJson.setBounds(150, nextFreeY, 800, 150);
 		contentPane.add(historySPJson);
 		
+
 	}
 	
 	private void addToHistoryArray ()
 	{
-		if (jtaHistory.getText().length() > 0)
-		{
-			jtaHistory.append("\n" );
-		}
-		jtaHistory.append("{" );
 		
-		for (int i=0; i < vSlider.size(); i++ )
+		for (int sg=0; sg < vhmSlider.size(); sg++)
 		{
-			jtaHistory.append(String.valueOf(vSlider.get(i).getValue()));
-			if (i < myMessageBytes.length -1)
+			if (vCheckBoxServoGrops.get(sg).isSelected())
 			{
-				jtaHistory.append(", ");
+				vScrollPaneHistoryArray.get(sg).getTextArea().append(getMessageArrayForServoGroup(sg) + "\n");
 			}
 		}
-		jtaHistory.append("}" );
 	}
 	
 	private void addToHistoryJson ()
 	{
-		// add newline if it is not the first entry in edit field
-		if (jtaHistoryJson.getText().length() > 0)
-		{
-			jtaHistoryJson.append("\n" );
-		}
+
 		// add the json message
 		jtaHistoryJson.append(getMessageJson());
 		
@@ -407,14 +509,14 @@ public class Gui extends JFrame implements ChangeListener {
 	@Override
 	public void stateChanged(ChangeEvent e) {
 		JSlider src =  (JSlider) e.getSource();
-//		System.out.println("IamCalled by "  + src.getName() + " to " + String.valueOf(src.getValue()));
+
 		
-		int id = hmSlider.get(src.getName());
-		int sliderValue = src.getValue();
-		// update byte values
-		myMessageBytes[id] = (byte) sliderValue;
-		// update edit fields
-		vMessageBytes.get(id).setText(String.valueOf(sliderValue));
+//		int id = hmSlider.get(src.getName());
+//		int sliderValue = src.getValue();
+//		// update byte values
+//		myMessageBytes[id] = (byte) sliderValue;
+//		// update edit fields
+//		vMessageBytes.get(id).setText(String.valueOf(sliderValue));
 		
 		if (chkBoxAutoSend.isSelected() && comm.isPortOpen())
 		{

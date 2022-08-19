@@ -26,37 +26,23 @@ import javax.swing.SwingConstants;
 
 public class SliderPanel extends JPanel implements ChangeListener {
 	
-	
-//	// from observer example
-//	public interface Observer {
-//        void update(String event);
-//    }
-//	
-//	private final List<Observer> observers = new ArrayList<>();
-//	  
-//    private void notifyObservers(String event) {
-//        observers.forEach(observer -> observer.update(event));
-//    }
-//  
-//    public void addObserver(Observer observer) {
-//        observers.add(observer);
-//    }
-//  
-    
+	   
     // my part
 	int value=90;
 	private JLabel labelSliderValue;
-	String name = new String();
-	JLabel labelName = new JLabel("name");
-	JSlider slider = new JSlider();
-	private String id = new String() ;
+	private String name = new String();
+	private JLabel labelName = new JLabel("name");
+	private JSlider slider = new JSlider();
+	private String jsonId = new String() ;
+	private int servoGroupId;
+	private JLabel labelServoGroup = new JLabel();
 	
 	public String getId() {
-		return id;
+		return jsonId;
 	}
 
 	public void setId(String id) {
-		this.id = id;
+		this.jsonId = id;
 	}
 
 	public int getValue()
@@ -64,30 +50,31 @@ public class SliderPanel extends JPanel implements ChangeListener {
 		return value;
 	}
 	
-//	public void setName(String name)
-//	{
-//		this.name = name;
-//		labelName.setText(this.name);
-//	}
+	public int getServoGroupId()
+	{
+		return servoGroupId;
+	}
+	
 	
 	/**
 	 * Create the panel.
 	 */
-	public SliderPanel(String id, String name) {
+	public SliderPanel(String jsonId, String name, int servoGroupId) {
 		
 		setLayout(null);
 		this.setName(name);
 		labelSliderValue = new JLabel("90");
-		labelSliderValue.setBounds(93, 0, 27, 44);
+		labelSliderValue.setBounds(150, 0, 27, 44);
 		add(labelSliderValue);
 		
-		
 		slider.setPaintTicks(true);
-		slider.setBounds(130, 4, 181, 40);
+		slider.setBounds(180, 4, 181, 40);
 		slider.addChangeListener(this);
 		slider.setName(name);
+		
 		labelName.setText(this.getName());
-		this.id = id ;
+		this.jsonId = jsonId ;
+		this.servoGroupId = servoGroupId;
 		
 		add(slider);
 //		slider.addChangeListener(new ChangeListener() {
@@ -106,6 +93,10 @@ public class SliderPanel extends JPanel implements ChangeListener {
 		
 		labelName.setBounds(0, 15, 83, 14);
 		add(labelName);
+		
+		labelServoGroup.setText("SG: " + String.valueOf(servoGroupId));
+		labelServoGroup.setBounds(90, 15, 83, 14);
+		add(labelServoGroup);
 
 	}
 
