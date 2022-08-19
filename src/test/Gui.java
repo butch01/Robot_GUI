@@ -83,8 +83,8 @@ public class Gui extends JFrame implements ChangeListener {
 	
 	private JScrollPane historySPJson = new JScrollPane(jtaHistoryJson, JScrollPane.VERTICAL_SCROLLBAR_ALWAYS, JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 	
-	private JLabel labelTime = new JLabel("TimeOffset (ms)");
-	private JTextField timeField = new JTextField("500");
+	private JLabel labelTime = new JLabel("TimeOffset (1/100s)");
+	private JTextField timeField = new JTextField("50");
 	
 	private boolean isPortOpened=false;
 	
@@ -189,7 +189,7 @@ public class Gui extends JFrame implements ChangeListener {
 	private void sendMessage()
 	{
 		//buildMessage();
-		updateMessageInTextfield();
+//		updateMessageInTextfield();
 		// comm.send(myMessageBytes);
 		comm.send(getMessageJson().getBytes());
 	}
@@ -377,8 +377,8 @@ public class Gui extends JFrame implements ChangeListener {
 		
 		nextFreeY = nextFreeY + 70;
 		
-		labelTime.setBounds(10, nextFreeY, 100, 30);
-		timeField.setBounds(120, nextFreeY +4, 50, 20);
+		labelTime.setBounds(10, nextFreeY, 130, 30);
+		timeField.setBounds(140, nextFreeY +4, 50, 20);
 		contentPane.add(timeField);
 		
 		contentPane.add(labelTime);
