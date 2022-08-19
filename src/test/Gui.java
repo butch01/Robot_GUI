@@ -131,37 +131,57 @@ public class Gui extends JFrame implements ChangeListener {
 	{
 	
 		StringBuilder sb = new StringBuilder();
+		int activeServoGroupCheckboxes=0;
 		
-		// opening bracket
-		sb.append("{");
-		
-		// adding time for keyframe
-		sb.append("\"t\":" + timeField.getText() + ",");
-		
-		// iterate over all servo groups
-		for (int servoGroupId=0; servoGroupId < vServoGroupSliders.size(); servoGroupId++)
+		for (int i=0; i < vCheckBoxServoGrops.size(); i++)
 		{
-			sb.append("\"sg" + String.valueOf(servoGroupId) + "\":{");
-			for (int i=0; i < vServoGroupSliders.get(servoGroupId).size(); i++ )
+			if (vCheckBoxServoGrops.get(i).isSelected() == true)
 			{
-				sb.append("\"" + vServoGroupSliders.get(servoGroupId).get(i).getId() + "\":" + String.valueOf(vServoGroupSliders.get(servoGroupId).get(i).getValue()));
-				// adding "," if we are not the last entry
-				if (i < vServoGroupSliders.get(servoGroupId).size() -1)
-				{
-					sb.append(",");
-				}
+				activeServoGroupCheckboxes++;
 			}
-			if (servoGroupId < vServoGroupSliders.size() -1)
-			{
-				sb.append("},");
-			}
-			else
-			{
-				sb.append("}");
-			}
-			
 		}
-		sb.append("}");
+		
+		// do only if at least one servo group is selected
+		if (activeServoGroupCheckboxes > 0)
+		{
+		
+			int alreadyWrittenServoGroupCounter=0;
+			
+			// opening bracket
+			sb.append("{");
+			
+			// adding time for keyframe
+			sb.append("\"t\":" + timeField.getText() + ",");
+			
+			// iterate over all servo groups
+			for (int servoGroupId=0; servoGroupId < vServoGroupSliders.size(); servoGroupId++)
+			{
+				if (vCheckBoxServoGrops.get(servoGroupId).isSelected())
+				{
+					sb.append("\"sg" + String.valueOf(servoGroupId) + "\":{");
+					for (int i=0; i < vServoGroupSliders.get(servoGroupId).size(); i++ )
+					{
+						sb.append("\"" + vServoGroupSliders.get(servoGroupId).get(i).getId() + "\":" + String.valueOf(vServoGroupSliders.get(servoGroupId).get(i).getValue()));
+						// adding "," if we are not the last entry
+						if (i < vServoGroupSliders.get(servoGroupId).size() -1)
+						{
+							sb.append(",");
+						}
+					}
+					if (alreadyWrittenServoGroupCounter < activeServoGroupCheckboxes -1)
+					{
+						sb.append("},");
+					}
+					else
+					{
+						sb.append("}");
+					}
+					alreadyWrittenServoGroupCounter++;
+				}
+				
+			}
+			sb.append("}\n");
+		}
 		return sb.toString();
 		
 	}
@@ -477,11 +497,7 @@ public class Gui extends JFrame implements ChangeListener {
 	
 	private void addToHistoryJson ()
 	{
-		// add newline if it is not the first entry in edit field
-		if (jtaHistoryJson.getText().length() > 0)
-		{
-			jtaHistoryJson.append("\n" );
-		}
+
 		// add the json message
 		jtaHistoryJson.append(getMessageJson());
 		
